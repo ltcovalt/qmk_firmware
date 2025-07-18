@@ -61,10 +61,11 @@ uint16_t get_tapping_term(uint16_t keycode, keyrecord_t *record) {
         case MT(MOD_RCTL, KC_SLSH):
             return 250;
         case MT(MOD_LSFT, KC_TAB):
-        case MT(MOD_LCTL, KC_Z):
         case MT(MOD_LALT, KC_X):
         case MT(MOD_LGUI, KC_C):
             return 300;
+        case MT(MOD_LCTL, KC_Z):
+            return 350;
         default:
             return TAPPING_TERM;
     }
@@ -111,6 +112,16 @@ bool get_permissive_hold(uint16_t keycode, keyrecord_t *record) {
     }
 }
 
+bool get_retro_tapping(uint16_t keycode, keyrecord_t *record) {
+    switch (keycode) {
+        case KC_BSPC:
+        case KC_SPC:
+            return false;
+        default:
+            return true;
+    }
+}
+
 bool get_auto_shifted_key(uint16_t keycode, keyrecord_t *record) {
     uint8_t layer = get_highest_layer(layer_state);
     switch(layer) {
@@ -123,6 +134,7 @@ bool get_auto_shifted_key(uint16_t keycode, keyrecord_t *record) {
                 case KC_SCLN:
                     return true;
             }
+            break;
         case 6:
             switch (keycode) {
                 case KC_1:
@@ -137,6 +149,7 @@ bool get_auto_shifted_key(uint16_t keycode, keyrecord_t *record) {
                 case KC_0:
                     return true;
             }
+            break;
     }
     return false;
 }
