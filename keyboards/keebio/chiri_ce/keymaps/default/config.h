@@ -10,6 +10,7 @@
 #define BOOTMAGIC_ROW_RIGHT 4
 #define BOOTMAGIC_COLUMN_RIGHT 1
 
+// Tapping/Hold behavior settings
 #define TAPPING_TERM 200
 #define AUTO_SHIFT_TIMEOUT 200
 #define AUTO_SHIFT_NO_SETUP

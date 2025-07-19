@@ -1,4 +1,21 @@
 #include QMK_KEYBOARD_H
+#include "eeprom.h"
+#include "timer.h"
+
+// Named HSV tuples for readability
+#define BASE        0, 0
+#define WHITE       0, 0
+#define RED         0, 255
+#define ORANGE     11, 255
+#define YELLOW     43, 255
+#define GREEN      85, 255
+#define CYAN      128, 255
+#define BLUE      170, 255
+#define PURPLE    191, 255
+#define NAVY      240, 255
+
+static uint8_t brightness = 0;
+static uint16_t brightness_timer = 0;
 
 /**
  * custom key codes
@@ -46,7 +63,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_TRNS,    LGUI(KC_S),   KC_VOLD,        KC_MUTE,      KC_VOLU,    KC_BRIU,                                      RGB_VAI,       KC_TRNS,       KC_TRNS,         KC_TRNS,        KC_TRNS,         KC_TRNS,
         KC_TRNS,    KC_TRNS,      KC_MPRV,        KC_MPLY,      KC_MNXT,    KC_BRID,                                      RGB_VAD,       KC_TRNS,       KC_TRNS,         KC_TRNS,        KC_TRNS,         KC_TRNS,
         KC_TRNS,    KC_TRNS,      KC_TRNS,        KC_TRNS,      KC_TRNS,    KC_TRNS,       KC_TRNS,        KC_TRNS,       KC_TRNS,       KC_TRNS,       KC_TRNS,         KC_TRNS,        KC_TRNS,         KC_TRNS,
-                                                                KC_TRNS,    KC_TRNS,       KC_TRNS,        KC_TRNS,       KC_TRNS,       QK_BOOT
+                                                                QK_BOOT,    KC_TRNS,       KC_TRNS,        KC_TRNS,       KC_TRNS,       QK_BOOT
     ),
     [6] = LAYOUT(
         KC_TRNS,    KC_F1,        KC_F2,          KC_F3,        KC_F4,      KC_F5,                                        KC_F6,         KC_F7,         KC_F8,           KC_F9,          KC_F10,          KC_TRNS,
@@ -58,7 +75,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_TRNS,    TO(0),        TO(1),          KC_TRNS,      KC_TRNS,    KC_TRNS,                                      KC_TRNS,       KC_TRNS,       KC_TRNS,         KC_TRNS,        KC_TRNS,         KC_TRNS,
         KC_TRNS,    KC_TRNS,      KC_TRNS,        KC_TRNS,      KC_TRNS,    KC_TRNS,                                      KC_TRNS,       KC_TRNS,       KC_TRNS,         KC_TRNS,        KC_TRNS,         KC_TRNS,
         KC_TRNS,    KC_TRNS,      KC_TRNS,        KC_TRNS,      KC_TRNS,    KC_TRNS,       KC_TRNS,        KC_TRNS,       KC_TRNS,       KC_TRNS,       KC_TRNS,         KC_TRNS,        KC_TRNS,          KC_TRNS,
-                                                                QK_BOOT,    KC_TRNS,       KC_TRNS,        KC_TRNS,       KC_TRNS,       KC_TRNS
+                                                                QK_BOOT,    KC_TRNS,       KC_TRNS,        KC_TRNS,       KC_TRNS,       QK_BOOT
     ),
 };
 
@@ -190,64 +207,53 @@ bool get_auto_shifted_key(uint16_t keycode, keyrecord_t *record) {
 void keyboard_post_init_user(void) {
     rgb_matrix_enable();
     rgb_matrix_mode(RGB_MATRIX_SOLID_COLOR);
-    rgb_matrix_sethsv(32, 128, 128);
+    // rgb_matrix_sethsv(32, 128, 128);
+    eeconfig_read_rgb_matrix(&rgb_matrix_config);   // ✅ correct for latest QMK
+    brightness = rgb_matrix_get_val();
+    rgb_matrix_sethsv(WHITE, brightness);
 }
 
 layer_state_t layer_state_set_user(layer_state_t state) {
     uint8_t layer = get_highest_layer(state);
-    uint8_t brightness = rgb_matrix_get_val();
+    brightness = rgb_matrix_get_val();
     rgb_matrix_mode(RGB_MATRIX_SOLID_COLOR);
 
     switch (layer) {
         case 0:
-            rgb_matrix_sethsv(32, 128, brightness);
+            rgb_matrix_sethsv(WHITE, brightness);
             break;
         case 1:
-            rgb_matrix_sethsv(0, 255, brightness);
+            rgb_matrix_sethsv(RED, brightness);
             break;
         case 4:
-            rgb_matrix_sethsv(144, 255, brightness);
+            rgb_matrix_sethsv(BLUE, brightness);
             break;
         case 6:
-            rgb_matrix_sethsv(224, 255, brightness);
+            rgb_matrix_sethsv(PURPLE, brightness);
             break;
     }
+
     return state;
 }
 
-bool process_record_user(uint16_t keycode, keyrecord_t *record) {
-    switch (keycode) {
-        case MACRO_CTRL_ALT_O:
-            if (record->event.pressed) {
-                register_code(KC_LCTL);
-                wait_ms(20);
-                register_code(KC_LALT);
-                wait_ms(20);
-                register_code(KC_O);
-                wait_ms(20);
-                unregister_code(KC_O);
-                wait_ms(20);
-                unregister_code(KC_LALT);
-                wait_ms(20);
-                unregister_code(KC_LCTL);
-            }
-            return false;
-
-        case MACRO_CTRL_ALT_M:
-            if (record->event.pressed) {
-                register_code(KC_LCTL);
-                wait_ms(20);
-                register_code(KC_LALT);
-                wait_ms(20);
-                register_code(KC_M);
-                wait_ms(20);
-                unregister_code(KC_M);
-                wait_ms(20);
-                unregister_code(KC_LALT);
-                wait_ms(20);
-                unregister_code(KC_LCTL);
-            }
-            return false;
+/**
+ * Per-key handling
+ */
+void post_process_record_user(uint16_t keycode, keyrecord_t *record) {
+    if (record->event.pressed) {
+        switch (keycode) {
+            case RGB_VAI:
+            case RGB_VAD:
+                brightness = rgb_matrix_get_val();
+                brightness_timer = timer_read();  // debounce
+                break;
+        }
     }
-   return true;
+}
+
+void matrix_scan_user(void) {
+    if (brightness_timer && timer_elapsed(brightness_timer) > 1000) {
+        eeconfig_update_rgb_matrix(&rgb_matrix_config);  // writes current config from internal state
+        brightness_timer = 0;
+    }
 }
