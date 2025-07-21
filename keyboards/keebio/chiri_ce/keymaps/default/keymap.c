@@ -14,8 +14,10 @@
 #define PURPLE    191, 255
 #define NAVY      240, 255
 
-static uint8_t brightness = 0;
+static uint8_t brightness = 64;
 static uint16_t brightness_timer = 0;
+static uint8_t led_index = 0;
+
 
 /**
  * custom key codes
@@ -23,6 +25,8 @@ static uint16_t brightness_timer = 0;
 enum custom_keycodes {
     MACRO_CTRL_ALT_O = SAFE_RANGE,
     MACRO_CTRL_ALT_M,
+    LED_NEXT,
+    LED_PREV
 };
 
 /**
@@ -45,7 +49,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_TRNS,    KC_TRNS,      KC_TRNS,        KC_TRNS,      KC_TRNS,   KC_TRNS,                                       KC_TRNS,       KC_TRNS,       KC_TRNS,         KC_TRNS,        KC_TRNS,         KC_TRNS,
         KC_TRNS,    KC_TRNS,      KC_TRNS,        KC_TRNS,      KC_TRNS,   KC_TRNS,                                       KC_TRNS,       KC_TRNS,       KC_TRNS,         KC_TRNS,        KC_TRNS,         KC_TRNS,
         KC_TRNS,    KC_TRNS,      KC_TRNS,        KC_TRNS,      KC_TRNS,   KC_TRNS,        KC_TRNS,        KC_TRNS,       KC_TRNS,       KC_TRNS,       KC_TRNS,         KC_TRNS,        KC_TRNS,         KC_TRNS,
-                                                                KC_TRNS,   KC_TRNS,        KC_TRNS,        KC_TRNS,       KC_TRNS,       KC_TRNS
+                                                                KC_TRNS,   KC_TRNS,        KC_TRNS,        KC_TRNS,       LED_PREV,      LED_NEXT
     ),
     [3] = LAYOUT(
         KC_TRNS,    KC_TRNS,      KC_TRNS,        KC_TRNS,      KC_TRNS,   KC_TRNS,                                       KC_TRNS,       KC_TRNS,       KC_TRNS,         KC_TRNS,        KC_TRNS,         KC_TRNS,
@@ -72,7 +76,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
                                                                 KC_TRNS,    KC_TRNS,       KC_TRNS,        KC_TRNS,       KC_TRNS,       KC_TRNS
     ),
     [7] = LAYOUT(
-        KC_TRNS,    TO(0),        TO(1),          KC_TRNS,      KC_TRNS,    KC_TRNS,                                      KC_TRNS,       KC_TRNS,       KC_TRNS,         KC_TRNS,        KC_TRNS,         KC_TRNS,
+        KC_TRNS,    TO(0),        TO(1),          TO(2),        KC_TRNS,    KC_TRNS,                                      KC_TRNS,       KC_TRNS,       KC_TRNS,         KC_TRNS,        KC_TRNS,         KC_TRNS,
         KC_TRNS,    KC_TRNS,      KC_TRNS,        KC_TRNS,      KC_TRNS,    KC_TRNS,                                      KC_TRNS,       KC_TRNS,       KC_TRNS,         KC_TRNS,        KC_TRNS,         KC_TRNS,
         KC_TRNS,    KC_TRNS,      KC_TRNS,        KC_TRNS,      KC_TRNS,    KC_TRNS,       KC_TRNS,        KC_TRNS,       KC_TRNS,       KC_TRNS,       KC_TRNS,         KC_TRNS,        KC_TRNS,          KC_TRNS,
                                                                 QK_BOOT,    KC_TRNS,       KC_TRNS,        KC_TRNS,       KC_TRNS,       QK_BOOT
@@ -88,12 +92,12 @@ uint16_t get_tapping_term(uint16_t keycode, keyrecord_t *record) {
         case MT(MOD_RGUI, KC_COMM):
         case MT(MOD_RALT, KC_DOT):
         case MT(MOD_RCTL, KC_SLSH):
-            return TAPPING_TERM + 50;
+            return TAPPING_TERM + 100;
         case MT(MOD_LSFT, KC_TAB):
         case MT(MOD_LALT, KC_X):
         case MT(MOD_LGUI, KC_C):
         case MT(MOD_LCTL, KC_Z):
-            return TAPPING_TERM + 100;
+            return TAPPING_TERM + 200;
         default:
             return TAPPING_TERM;
     }
@@ -207,8 +211,7 @@ bool get_auto_shifted_key(uint16_t keycode, keyrecord_t *record) {
 void keyboard_post_init_user(void) {
     rgb_matrix_enable();
     rgb_matrix_mode(RGB_MATRIX_SOLID_COLOR);
-    // rgb_matrix_sethsv(32, 128, 128);
-    eeconfig_read_rgb_matrix(&rgb_matrix_config);   // ✅ correct for latest QMK
+    eeconfig_read_rgb_matrix(&rgb_matrix_config);
     brightness = rgb_matrix_get_val();
     rgb_matrix_sethsv(WHITE, brightness);
 }
@@ -236,9 +239,37 @@ layer_state_t layer_state_set_user(layer_state_t state) {
     return state;
 }
 
+bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
+    if (layer_state_is(2)) {
+        for (uint8_t i = led_min; i < led_max; ++i) {
+            if (i == led_index) {
+                rgb_matrix_set_color(i, 255, 0, 0);  // red
+            } else {
+                rgb_matrix_set_color(i, 0, 0, 0);
+            }
+        }
+    }
+    return false;
+}
+
 /**
  * Per-key handling
  */
+ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+    if (record->event.pressed) {
+        switch (keycode) {
+            case LED_NEXT:
+                led_index = (led_index + 1) % DRIVER_LED_TOTAL;
+                return false;
+
+            case LED_PREV:
+                led_index = (led_index + DRIVER_LED_TOTAL - 1) % DRIVER_LED_TOTAL;
+                return false;
+        }
+    }
+    return true;
+}
+
 void post_process_record_user(uint16_t keycode, keyrecord_t *record) {
     if (record->event.pressed) {
         switch (keycode) {
