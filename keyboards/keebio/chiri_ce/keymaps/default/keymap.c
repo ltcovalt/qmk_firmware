@@ -16,18 +16,6 @@
 
 static uint8_t brightness = 64;
 static uint16_t brightness_timer = 0;
-static uint8_t led_index = 0;
-
-
-/**
- * custom key codes
- */
-enum custom_keycodes {
-    MACRO_CTRL_ALT_O = SAFE_RANGE,
-    MACRO_CTRL_ALT_M,
-    LED_NEXT,
-    LED_PREV
-};
 
 /**
  * KEYMAP
@@ -49,7 +37,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_TRNS,    KC_TRNS,      KC_TRNS,        KC_TRNS,      KC_TRNS,   KC_TRNS,                                       KC_TRNS,       KC_TRNS,       KC_TRNS,         KC_TRNS,        KC_TRNS,         KC_TRNS,
         KC_TRNS,    KC_TRNS,      KC_TRNS,        KC_TRNS,      KC_TRNS,   KC_TRNS,                                       KC_TRNS,       KC_TRNS,       KC_TRNS,         KC_TRNS,        KC_TRNS,         KC_TRNS,
         KC_TRNS,    KC_TRNS,      KC_TRNS,        KC_TRNS,      KC_TRNS,   KC_TRNS,        KC_TRNS,        KC_TRNS,       KC_TRNS,       KC_TRNS,       KC_TRNS,         KC_TRNS,        KC_TRNS,         KC_TRNS,
-                                                                KC_TRNS,   KC_TRNS,        KC_TRNS,        KC_TRNS,       LED_PREV,      LED_NEXT
+                                                                KC_TRNS,   KC_TRNS,        KC_TRNS,        KC_TRNS,       KC_TRNS,       KC_TRNS
     ),
     [3] = LAYOUT(
         KC_TRNS,    KC_TRNS,      KC_TRNS,        KC_TRNS,      KC_TRNS,   KC_TRNS,                                       KC_TRNS,       KC_TRNS,       KC_TRNS,         KC_TRNS,        KC_TRNS,         KC_TRNS,
@@ -209,67 +197,39 @@ bool get_auto_shifted_key(uint16_t keycode, keyrecord_t *record) {
  * RGB SETTINGS
  */
 void keyboard_post_init_user(void) {
-    rgb_matrix_enable();
-    rgb_matrix_mode(RGB_MATRIX_SOLID_COLOR);
+    rgb_matrix_enable_noeeprom();
+    rgb_matrix_mode_noeeprom(RGB_MATRIX_SOLID_COLOR);
     eeconfig_read_rgb_matrix(&rgb_matrix_config);
     brightness = rgb_matrix_get_val();
-    rgb_matrix_sethsv(WHITE, brightness);
+    rgb_matrix_sethsv_noeeprom(WHITE, brightness);
 }
 
 layer_state_t layer_state_set_user(layer_state_t state) {
     uint8_t layer = get_highest_layer(state);
     brightness = rgb_matrix_get_val();
-    rgb_matrix_mode(RGB_MATRIX_SOLID_COLOR);
+    rgb_matrix_mode_noeeprom(RGB_MATRIX_SOLID_COLOR);
 
     switch (layer) {
         case 0:
-            rgb_matrix_sethsv(WHITE, brightness);
+            rgb_matrix_sethsv_noeeprom(WHITE, brightness);
             break;
         case 1:
-            rgb_matrix_sethsv(RED, brightness);
+            rgb_matrix_sethsv_noeeprom(RED, brightness);
             break;
         case 4:
-            rgb_matrix_sethsv(BLUE, brightness);
+            rgb_matrix_sethsv_noeeprom(BLUE, brightness);
             break;
         case 6:
-            rgb_matrix_sethsv(PURPLE, brightness);
+            rgb_matrix_sethsv_noeeprom(PURPLE, brightness);
             break;
     }
 
     return state;
 }
 
-bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
-    if (layer_state_is(2)) {
-        for (uint8_t i = led_min; i < led_max; ++i) {
-            if (i == led_index) {
-                rgb_matrix_set_color(i, 255, 0, 0);  // red
-            } else {
-                rgb_matrix_set_color(i, 0, 0, 0);
-            }
-        }
-    }
-    return false;
-}
-
 /**
- * Per-key handling
+ * per keny handling
  */
- bool process_record_user(uint16_t keycode, keyrecord_t *record) {
-    if (record->event.pressed) {
-        switch (keycode) {
-            case LED_NEXT:
-                led_index = (led_index + 1) % DRIVER_LED_TOTAL;
-                return false;
-
-            case LED_PREV:
-                led_index = (led_index + DRIVER_LED_TOTAL - 1) % DRIVER_LED_TOTAL;
-                return false;
-        }
-    }
-    return true;
-}
-
 void post_process_record_user(uint16_t keycode, keyrecord_t *record) {
     if (record->event.pressed) {
         switch (keycode) {
@@ -283,6 +243,7 @@ void post_process_record_user(uint16_t keycode, keyrecord_t *record) {
 }
 
 void matrix_scan_user(void) {
+    // save brighness to eeprom after 1s of no changes
     if (brightness_timer && timer_elapsed(brightness_timer) > 1000) {
         eeconfig_update_rgb_matrix(&rgb_matrix_config);  // writes current config from internal state
         brightness_timer = 0;

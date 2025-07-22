@@ -18,7 +18,11 @@
 #define TAPPING_CHORDAL_HOLD
 #define HOLD_ON_OTHER_KEY_PRESS_PER_KEY
 
-// RGB Settings
+// RGB settings
+#define RGB_MATRIX_TIMEOUT 60000
+#define RGB_MATRIX_SLEEP
+
+// Split sync settings
 #define DRIVER_LED_TOTAL 44
 #define SPLIT_LED_STATE_ENABLE
 #define SPLIT_LAYER_STATE_ENABLE
