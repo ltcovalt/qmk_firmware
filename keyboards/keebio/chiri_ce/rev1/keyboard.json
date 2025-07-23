@@ -109,7 +109,7 @@
             {"matrix": [5, 0], "x": 224, "y": 18, "flags": 4},
             {"matrix": [4, 0], "x": 224, "y": 5, "flags": 4}
         ],
-        "max_brightness": 176,
+        "max_brightness": 184,
         "split_count": [22, 22],
         "sleep": true
     },
