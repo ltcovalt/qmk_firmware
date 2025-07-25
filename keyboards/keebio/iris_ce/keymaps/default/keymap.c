@@ -4,6 +4,7 @@
 #include QMK_KEYBOARD_H
 #include "eeprom.h"
 #include "timer.h"
+#include "rgb_matrix.h"
 
 // Named HSV tuples for readability
 #define WHITE       0, 0
@@ -154,7 +155,6 @@ uint16_t get_tapping_term(uint16_t keycode, keyrecord_t *record) {
         case MT(MOD_RALT, KC_DOT):
         case MT(MOD_RCTL, KC_SLSH):
             return TAPPING_TERM + 100;
-        case MT(MOD_LSFT, KC_TAB):
         case MT(MOD_LALT, KC_X):
         case MT(MOD_LGUI, KC_C):
         case MT(MOD_LCTL, KC_Z):
@@ -296,13 +296,13 @@ layer_state_t layer_state_set_user(layer_state_t state) {
             rgb_matrix_sethsv_noeeprom(PURPLE, brightness);
             break;
     }
-
     return state;
 }
 
 /**
- * per keny handling
+ * per key handling
  */
+
 void post_process_record_user(uint16_t keycode, keyrecord_t *record) {
     if (record->event.pressed) {
         switch (keycode) {
