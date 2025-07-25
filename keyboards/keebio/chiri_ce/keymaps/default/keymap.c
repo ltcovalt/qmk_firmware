@@ -1,74 +1,133 @@
+// Copyright 2023 Danny Nguyen (@nooges)
+// SPDX-License-Identifier: GPL-2.0-or-later
+
 #include QMK_KEYBOARD_H
 #include "eeprom.h"
 #include "timer.h"
 
 // Named HSV tuples for readability
-#define BASE        0, 0
 #define WHITE       0, 0
 #define RED         0, 255
-#define ORANGE     11, 255
-#define YELLOW     43, 255
 #define GREEN      85, 255
-#define CYAN      128, 255
 #define BLUE      170, 255
 #define PURPLE    191, 255
-#define NAVY      240, 255
+
+// key tap aliases
+#define LSG_S LSG(KC_S)
+
+// bottom row mod aliases
+#define BRM_Z MT(MOD_LCTL, KC_Z)
+#define BRM_X MT(MOD_LALT, KC_X)
+#define BRM_C MT(MOD_LGUI, KC_C)
+#define BRM_COMM MT(MOD_RGUI, KC_COMM)
+#define BRM_DOT MT(MOD_RALT, KC_DOT)
+#define BRM_SLSH MT(MOD_RCTL, KC_SLSH)
+
+// layer/mod tap aliases
+#define NAV_BS LT(NAV, KC_BSPC)
+#define NAV_SPC LT(NAV, KC_SPC)
+#define NUM_ENT LT(NUM, KC_ENT)
+#define MT_TAB MT(MOD_LSFT, KC_TAB)
 
 static uint8_t brightness = 64;
 static uint16_t brightness_timer = 0;
+
+enum custom_layers {
+     DFLT,
+     GAME,
+     NAV,
+     SYS,
+     NUM,
+     CFG
+};
 
 /**
  * KEYMAP
  */
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
-    [0] = LAYOUT(
-        KC_TAB,     KC_Q,         KC_W,           KC_F,         KC_P,      KC_B,                                          KC_J,          KC_L,          KC_U,            KC_Y,           KC_QUOT,         KC_TRNS,
-        KC_ESC,     KC_A,         KC_R,           KC_S,         KC_T,      KC_G,                                          KC_M,          KC_N,          KC_E,            KC_I,           KC_O,            KC_TRNS,
-        KC_LCTL,    LCTL_T(KC_Z), LALT_T(KC_X),   LGUI_T(KC_C), KC_D,      KC_V,           MO(5),          MO(7),         KC_K,          KC_H,          RGUI_T(KC_COMM), RALT_T(KC_DOT), RCTL_T(KC_SLSH), KC_ENT,
-                                                                KC_ESC,    LSFT_T(KC_TAB), LT(4, KC_BSPC), LT(4,KC_SPC),  LT(6,KC_ENT),  KC_LALT
+    [DFLT] = LAYOUT(
+    // ┌────────┬────────┬────────┬────────┬────────┬────────┐                          ┌────────┬────────┬────────┬────────┬────────┬────────┐
+        KC_TAB,  KC_Q,    KC_W,    KC_F,    KC_P,    KC_B,                               KC_J,    KC_L,    KC_U,    KC_Y,    KC_QUOT, _______,
+    // ├────────┼────────┼────────┼────────┼────────┼────────┤                          ├────────┼────────┼────────┼────────┼────────┼────────┤
+        KC_ESC,  KC_A,    KC_R,    KC_S,    KC_T,    KC_G,                               KC_M,    KC_N,    KC_E,    KC_I,    KC_O,    _______,
+    // ├────────┼────────┼────────┼────────┼────────┼────────┼────────┐        ┌────────┼────────┼────────┼────────┼────────┼────────┼────────┤
+        KC_LCTL, BRM_Z,   BRM_X,   BRM_C,   KC_D,    KC_V,    MO(SYS),          MO(CFG), KC_K,    KC_H,    BRM_COMM,BRM_DOT, BRM_SLSH,KC_ENT,
+    // └────────┴────────┴────────┴───┬────┴───┬────┴───┬────┴───┬────┘        └───┬────┴───┬────┴───┬────┴───┬────┴────────┴────────┴────────┘
+                                       KC_ESC,  MT_TAB,  NAV_BS,                    NAV_SPC, NUM_ENT, KC_LALT
+    //                                └────────┴────────┴────────┘                 └────────┴────────┴────────┘
     ),
-    [1] = LAYOUT(
-        KC_TRNS,    KC_I,         KC_Q,           KC_W,         KC_E,      KC_R,                                          KC_TRNS,       KC_TRNS,       KC_TRNS,         KC_TRNS,        KC_TRNS,         KC_TRNS,
-        KC_TRNS,    KC_LSFT,      KC_A,           KC_S,         KC_D,      KC_F,                                          KC_TRNS,       KC_TRNS,       KC_TRNS,         KC_TRNS,        KC_TRNS,         KC_TRNS,
-        KC_TRNS,    KC_M,         KC_Z,           KC_X,         KC_C,      KC_V,           MO(5),          MO(7),         KC_TRNS,       KC_TRNS,       KC_TRNS,         KC_TRNS,        KC_TRNS,         KC_TRNS,
-                                                                KC_TRNS,   MO(4),          KC_SPC,         KC_TRNS,       KC_TRNS,       KC_TRNS
+
+    [GAME] = LAYOUT(
+    // ┌────────┬────────┬────────┬────────┬────────┬────────┐                          ┌────────┬────────┬────────┬────────┬────────┬────────┐
+        _______, KC_I,    KC_Q,    KC_W,    KC_E,    KC_R,                               _______, _______, _______, _______, _______, _______,
+    // ├────────┼────────┼────────┼────────┼────────┼────────┤                          ├────────┼────────┼────────┼────────┼────────┼────────┤
+        _______, KC_LSFT, KC_A,    KC_S,    KC_D,    KC_F,                               _______, _______, _______, _______, _______, _______,
+    // ├────────┼────────┼────────┼────────┼────────┼────────┼────────┐        ┌────────┼────────┼────────┼────────┼────────┼────────┼────────┤
+        _______, KC_M,    KC_Z,    KC_X,    KC_C,    KC_V,    MO(SYS),          MO(CFG), _______, _______, _______, _______, _______, _______,
+    // └────────┴────────┴────────┴───┬────┴───┬────┴───┬────┴───┬────┘        └───┬────┴───┬────┴───┬────┴───┬────┴────────┴────────┴────────┘
+                                       _______, MO(NAV), KC_SPC,                    _______, _______, _______
+    //                                └────────┴────────┴────────┘                 └────────┴────────┴────────┘
     ),
-    [2] = LAYOUT(
-        KC_TRNS,    KC_TRNS,      KC_TRNS,        KC_TRNS,      KC_TRNS,   KC_TRNS,                                       KC_TRNS,       KC_TRNS,       KC_TRNS,         KC_TRNS,        KC_TRNS,         KC_TRNS,
-        KC_TRNS,    KC_TRNS,      KC_TRNS,        KC_TRNS,      KC_TRNS,   KC_TRNS,                                       KC_TRNS,       KC_TRNS,       KC_TRNS,         KC_TRNS,        KC_TRNS,         KC_TRNS,
-        KC_TRNS,    KC_TRNS,      KC_TRNS,        KC_TRNS,      KC_TRNS,   KC_TRNS,        KC_TRNS,        KC_TRNS,       KC_TRNS,       KC_TRNS,       KC_TRNS,         KC_TRNS,        KC_TRNS,         KC_TRNS,
-                                                                KC_TRNS,   KC_TRNS,        KC_TRNS,        KC_TRNS,       KC_TRNS,       KC_TRNS
+
+    [NAV] = LAYOUT(
+    // ┌────────┬────────┬────────┬────────┬────────┬────────┐                          ┌────────┬────────┬────────┬────────┬────────┬────────┐
+        _______, KC_TAB,  KC_BSPC, KC_UP,   KC_DEL,  KC_LBRC,                            KC_RBRC, KC_GRV,  KC_PLUS, KC_PIPE, KC_DQUO, _______,
+    // ├────────┼────────┼────────┼────────┼────────┼────────┤                          ├────────┼────────┼────────┼────────┼────────┼────────┤
+        _______, KC_LSFT, KC_LEFT, KC_DOWN, KC_RIGHT,KC_LPRN,                            KC_RPRN, KC_MINS, KC_EQL,  KC_BSLS, KC_SCLN, _______,
+    // ├────────┼────────┼────────┼────────┼────────┼────────┼────────┐        ┌────────┼────────┼────────┼────────┼────────┼────────┼────────┤
+        _______, KC_LGUI, _______, KC_HOME, KC_END,  KC_LCBR, _______,          _______, KC_RCBR, KC_UNDS, KC_LT,   KC_GT,   KC_QUES, _______,
+    // └────────┴────────┴────────┴───┬────┴───┬────┴───┬────┴───┬────┘        └───┬────┴───┬────┴───┬────┴───┬────┴────────┴────────┴────────┘
+                                       _______, _______, _______,                   _______, _______, _______
+    //                                └────────┴────────┴────────┘                 └────────┴────────┴────────┘
     ),
-    [3] = LAYOUT(
-        KC_TRNS,    KC_TRNS,      KC_TRNS,        KC_TRNS,      KC_TRNS,   KC_TRNS,                                       KC_TRNS,       KC_TRNS,       KC_TRNS,         KC_TRNS,        KC_TRNS,         KC_TRNS,
-        KC_TRNS,    KC_TRNS,      KC_TRNS,        KC_TRNS,      KC_TRNS,   KC_TRNS,                                       KC_TRNS,       KC_TRNS,       KC_TRNS,         KC_TRNS,        KC_TRNS,         KC_TRNS,
-        KC_TRNS,    KC_TRNS,      KC_TRNS,        KC_TRNS,      KC_TRNS,   KC_TRNS,        KC_TRNS,        KC_TRNS,       KC_TRNS,       KC_TRNS,       KC_TRNS,         KC_TRNS,        KC_TRNS,         KC_TRNS,
-                                                                KC_TRNS,   KC_TRNS,        KC_TRNS,        KC_TRNS,       KC_TRNS,       KC_TRNS
+
+    [SYS] = LAYOUT(
+    // ┌────────┬────────┬────────┬────────┬────────┬────────┐                          ┌────────┬────────┬────────┬────────┬────────┬────────┐
+        _______, LSG_S,   KC_VOLD, KC_MUTE, KC_VOLU, KC_BRIU,                            RGB_VAI, _______, _______, _______, _______, _______,
+    // ├────────┼────────┼────────┼────────┼────────┼────────┤                          ├────────┼────────┼────────┼────────┼────────┼────────┤
+        _______, _______, KC_MPRV, KC_MPLY, KC_MNXT, KC_BRID,                            RGB_VAD, _______, _______, _______, _______, _______,
+    // ├────────┼────────┼────────┼────────┼────────┼────────┼────────┐        ┌────────┼────────┼────────┼────────┼────────┼────────┼────────┤
+        _______, _______, _______, _______, _______, _______, _______,          _______, _______, _______, _______, _______, _______, _______,
+    // └────────┴────────┴────────┴───┬────┴───┬────┴───┬────┴───┬────┘        └───┬────┴───┬────┴───┬────┴───┬────┴────────┴────────┴────────┘
+                                       QK_BOOT, _______, _______,                   _______, _______, QK_BOOT
+    //                                └────────┴────────┴────────┘                 └────────┴────────┴────────┘
     ),
-    [4] = LAYOUT(
-        KC_TRNS,    KC_TAB,       KC_BSPC,        KC_UP,        KC_DELETE, KC_LBRC,                                       KC_RBRC,       KC_GRV,        LSFT(KC_EQL),    LSFT(KC_BSLS),  LSFT(KC_QUOTE),  KC_TRNS,
-        KC_TRNS,    KC_LSFT,      KC_LEFT,        KC_DOWN,      KC_RIGHT,  LSFT(KC_9),                                    LSFT(KC_0),    KC_MINS,       KC_EQL,          KC_BSLS,        KC_SCLN,         KC_TRNS,
-        KC_TRNS,    KC_LGUI,      KC_TRNS,        KC_HOME,      KC_END,    LSFT(KC_LBRC),  KC_TRNS,        KC_TRNS,       LSFT(KC_RBRC), LSFT(KC_MINS), LSFT(KC_COMM),   LSFT(KC_DOT),   LSFT(KC_SLSH),   KC_TRNS,
-                                                                KC_TRNS,   KC_TRNS,        KC_TRNS,        KC_TRNS,       KC_TRNS,       KC_TRNS
+
+    [NUM] = LAYOUT(
+    // ┌────────┬────────┬────────┬────────┬────────┬────────┐                          ┌────────┬────────┬────────┬────────┬────────┬────────┐
+        _______, KC_EXLM, KC_AT,   KC_HASH, KC_DLR,  KC_PERC,                            KC_CIRC, KC_AMPR, KC_ASTR, KC_LPRN, KC_RPRN, _______,
+    // ├────────┼────────┼────────┼────────┼────────┼────────┤                          ├────────┼────────┼────────┼────────┼────────┼────────┤
+        _______, KC_1,    KC_2,    KC_3,    KC_4,    KC_5,                               KC_6,    KC_7,    KC_8,    KC_9,    KC_0,    _______,
+    // ├────────┼────────┼────────┼────────┼────────┼────────┼────────┐        ┌────────┼────────┼────────┼────────┼────────┼────────┼────────┤
+        _______, KC_F1,   KC_F2,   KC_F3,   KC_F4,   KC_F5,   KC_F11,           KC_F12,  KC_F6,   KC_F7,   KC_F8,   KC_F9,   KC_F10,  _______,
+    // └────────┴────────┴────────┴───┬────┴───┬────┴───┬────┴───┬────┘        └───┬────┴───┬────┴───┬────┴───┬────┴────────┴────────┴────────┘
+                                       _______, _______, _______,                   _______, _______, _______
+    //                                └────────┴────────┴────────┘                 └────────┴────────┴────────┘
     ),
-    [5] = LAYOUT(
-        KC_TRNS,    LGUI(KC_S),   KC_VOLD,        KC_MUTE,      KC_VOLU,    KC_BRIU,                                      RGB_VAI,       KC_TRNS,       KC_TRNS,         KC_TRNS,        KC_TRNS,         KC_TRNS,
-        KC_TRNS,    KC_TRNS,      KC_MPRV,        KC_MPLY,      KC_MNXT,    KC_BRID,                                      RGB_VAD,       KC_TRNS,       KC_TRNS,         KC_TRNS,        KC_TRNS,         KC_TRNS,
-        KC_TRNS,    KC_TRNS,      KC_TRNS,        KC_TRNS,      KC_TRNS,    KC_TRNS,       KC_TRNS,        KC_TRNS,       KC_TRNS,       KC_TRNS,       KC_TRNS,         KC_TRNS,        KC_TRNS,         KC_TRNS,
-                                                                QK_BOOT,    KC_TRNS,       KC_TRNS,        KC_TRNS,       KC_TRNS,       QK_BOOT
+
+    [CFG] = LAYOUT(
+    // ┌────────┬────────┬────────┬────────┬────────┬────────┐                          ┌────────┬────────┬────────┬────────┬────────┬────────┐
+        _______, TO(DFLT),TO(GAME),_______, _______, _______,                            _______, _______, _______, _______, _______, _______,
+    // ├────────┼────────┼────────┼────────┼────────┼────────┤                          ├────────┼────────┼────────┼────────┼────────┼────────┤
+        _______, _______, _______, _______, _______, _______,                            _______, _______, _______, _______, _______, _______,
+    // ├────────┼────────┼────────┼────────┼────────┼────────┼────────┐        ┌────────┼────────┼────────┼────────┼────────┼────────┼────────┤
+        _______, _______, _______, _______, _______, _______, _______,          _______, _______, _______, _______, _______, _______, _______,
+    // └────────┴────────┴────────┴───┬────┴───┬────┴───┬────┴───┬────┘        └───┬────┴───┬────┴───┬────┴───┬────┴────────┴────────┴────────┘
+                                       QK_BOOT, _______, _______,                   _______, _______, QK_BOOT
+    //                                └────────┴────────┴────────┘                 └────────┴────────┴────────┘
     ),
-    [6] = LAYOUT(
-        KC_TRNS,    KC_F1,        KC_F2,          KC_F3,        KC_F4,      KC_F5,                                        KC_F6,         KC_F7,         KC_F8,           KC_F9,          KC_F10,          KC_TRNS,
-        KC_TRNS,    KC_1,         KC_2,           KC_3,         KC_4,       KC_5,                                         KC_6,          KC_7,          KC_8,            KC_9,           KC_0,            KC_TRNS,
-        KC_TRNS,    KC_TRNS,      KC_TRNS,        KC_TRNS,      KC_TRNS,    KC_TRNS,       KC_TRNS,        KC_TRNS,       KC_F11,        KC_F12,        KC_TRNS,         KC_TRNS,        KC_TRNS,         KC_TRNS,
-                                                                KC_TRNS,    KC_TRNS,       KC_TRNS,        KC_TRNS,       KC_TRNS,       KC_TRNS
-    ),
-    [7] = LAYOUT(
-        KC_TRNS,    TO(0),        TO(1),          TO(2),        KC_TRNS,    KC_TRNS,                                      KC_TRNS,       KC_TRNS,       KC_TRNS,         KC_TRNS,        KC_TRNS,         KC_TRNS,
-        KC_TRNS,    KC_TRNS,      KC_TRNS,        KC_TRNS,      KC_TRNS,    KC_TRNS,                                      KC_TRNS,       KC_TRNS,       KC_TRNS,         KC_TRNS,        KC_TRNS,         KC_TRNS,
-        KC_TRNS,    KC_TRNS,      KC_TRNS,        KC_TRNS,      KC_TRNS,    KC_TRNS,       KC_TRNS,        KC_TRNS,       KC_TRNS,       KC_TRNS,       KC_TRNS,         KC_TRNS,        KC_TRNS,          KC_TRNS,
-                                                                QK_BOOT,    KC_TRNS,       KC_TRNS,        KC_TRNS,       KC_TRNS,       QK_BOOT
-    ),
+
+    //[NEW] = LAYOUT(
+    // ┌────────┬────────┬────────┬────────┬────────┬────────┐                          ┌────────┬────────┬────────┬────────┬────────┬────────┐
+
+    // ├────────┼────────┼────────┼────────┼────────┼────────┤                          ├────────┼────────┼────────┼────────┼────────┼────────┤
+
+    // ├────────┼────────┼────────┼────────┼────────┼────────┼────────┐        ┌────────┼────────┼────────┼────────┼────────┼────────┼────────┤
+
+    // └────────┴────────┴────────┴───┬────┴───┬────┴───┬────┴───┬────┘        └───┬────┴───┬────┴───┬────┴───┬────┴────────┴────────┴────────┘
+
+    //                                └────────┴────────┴────────┘                 └────────┴────────┴────────┘
+    //),
 };
 
 /**
@@ -99,8 +158,8 @@ uint16_t get_tapping_term(uint16_t keycode, keyrecord_t *record) {
 uint16_t get_quick_tap_term(uint16_t keycode, keyrecord_t *record) {
     switch (keycode) {
         case MT(MOD_LSFT, KC_TAB):
-        case LT(4, KC_SPC):
-        case LT(4, KC_BSPC):
+        case LT(NAV, KC_SPC):
+        case LT(NAV, KC_BSPC):
             return 200;
         case MT(MOD_LALT, KC_X):
         case MT(MOD_LGUI, KC_C):
@@ -131,8 +190,8 @@ bool get_hold_on_other_key_press(uint16_t keycode, keyrecord_t *record) {
 bool get_permissive_hold(uint16_t keycode, keyrecord_t *record) {
     switch (keycode) {
         case MT(MOD_LSFT, KC_TAB):
-        case LT(4, KC_SPC):
-        case LT(4, KC_BSPC):
+        case LT(NAV, KC_SPC):
+        case LT(NAV, KC_BSPC):
             return true;
         default:
             return false;
@@ -164,7 +223,7 @@ bool get_retro_tapping(uint16_t keycode, keyrecord_t *record) {
 bool get_auto_shifted_key(uint16_t keycode, keyrecord_t *record) {
     uint8_t layer = get_highest_layer(layer_state);
     switch(layer) {
-        case 4:
+        case NAV:
             switch (keycode) {
                 case KC_GRV:
                 case KC_MINS:
@@ -174,7 +233,7 @@ bool get_auto_shifted_key(uint16_t keycode, keyrecord_t *record) {
                     return true;
             }
             break;
-        case 6:
+        case NUM:
             switch (keycode) {
                 case KC_1:
                 case KC_2:
@@ -210,16 +269,16 @@ layer_state_t layer_state_set_user(layer_state_t state) {
     rgb_matrix_mode_noeeprom(RGB_MATRIX_SOLID_COLOR);
 
     switch (layer) {
-        case 0:
+        case DFLT:
             rgb_matrix_sethsv_noeeprom(WHITE, brightness);
             break;
-        case 1:
+        case GAME:
             rgb_matrix_sethsv_noeeprom(RED, brightness);
             break;
-        case 4:
+        case NAV:
             rgb_matrix_sethsv_noeeprom(BLUE, brightness);
             break;
-        case 6:
+        case NUM:
             rgb_matrix_sethsv_noeeprom(PURPLE, brightness);
             break;
     }
