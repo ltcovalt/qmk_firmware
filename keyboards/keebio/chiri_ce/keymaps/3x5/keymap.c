@@ -83,9 +83,9 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
     [SYS] = LAYOUT(
     // ┌────────┬────────┬────────┬────────┬────────┬────────┐                          ┌────────┬────────┬────────┬────────┬────────┬────────┐
-        _______, LSG_S,   KC_VOLD, KC_MUTE, KC_VOLU, KC_BRIU,                            RGB_VAI, _______, _______, _______, _______, _______,
+        _______, _______, KC_VOLD, KC_MUTE, KC_VOLU, KC_BRIU,                            RGB_VAI, _______, _______, _______, _______, _______,
     // ├────────┼────────┼────────┼────────┼────────┼────────┤                          ├────────┼────────┼────────┼────────┼────────┼────────┤
-        _______, _______, KC_MPRV, KC_MPLY, KC_MNXT, KC_BRID,                            RGB_VAD, _______, _______, _______, _______, _______,
+        _______, LSG_S,   KC_MPRV, KC_MPLY, KC_MNXT, KC_BRID,                            RGB_VAD, _______, _______, _______, _______, _______,
     // ├────────┼────────┼────────┼────────┼────────┼────────┼────────┐        ┌────────┼────────┼────────┼────────┼────────┼────────┼────────┤
         _______, KC_F1,   KC_F2,   KC_F3,   KC_F4,   KC_F5,   KC_F11,           KC_F12,  KC_F6,   KC_F7,   KC_F8,   KC_F9,   KC_F10,  _______,
     // └────────┴────────┴────────┴───┬────┴───┬────┴───┬────┴───┬────┘        └───┬────┴───┬────┴───┬────┴───┬────┴────────┴────────┴────────┘
@@ -169,15 +169,18 @@ uint16_t get_quick_tap_term(uint16_t keycode, keyrecord_t *record) {
 }
 
 /**
- * Get hold on other key press
- * If a key is held when another is pressed, treat it as a hold, even if it's within the tapping term
+ * Flow Tap
+ * biases tap-hold keys toward tap (and enables auto-repeat) if pressed right after another key
  */
-bool get_hold_on_other_key_press(uint16_t keycode, keyrecord_t *record) {
-    switch (keycode) {
-        case MT(MOD_LSFT, KC_TAB):
-            return true;
+uint16_t get_flow_tap_term(uint16_t keycode, keyrecord_t *record, uint16_t prev_keycode) {
+    switch (get_tap_keycode(keycode)) {
+        case KC_SPC:
+        case KC_BSPC:
+        case KC_ENT:
+        case KC_TAB:
+            return 0;
         default:
-            return false;
+            return FLOW_TAP_TERM;
     }
 }
 

@@ -169,15 +169,18 @@ uint16_t get_quick_tap_term(uint16_t keycode, keyrecord_t *record) {
 }
 
 /**
- * Get hold on other key press
- * If a key is held when another is pressed, treat it as a hold, even if it's within the tapping term
+ * Flow Tap
+ * biases tap-hold keys toward tap (and enables auto-repeat) if pressed right after another key
  */
-bool get_hold_on_other_key_press(uint16_t keycode, keyrecord_t *record) {
-    switch (keycode) {
-        case MT(MOD_LSFT, KC_TAB):
-            return true;
+uint16_t get_flow_tap_term(uint16_t keycode, keyrecord_t *record, uint16_t prev_keycode) {
+    switch (get_tap_keycode(keycode)) {
+        case KC_SPC:
+        case KC_BSPC:
+        case KC_ENT:
+        case KC_TAB:
+            return 0;
         default:
-            return false;
+            return FLOW_TAP_TERM;
     }
 }
 
